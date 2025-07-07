@@ -1,14 +1,13 @@
-fastapi
+fastapi[all]
 uvicorn
-langgraph
-langchain
-langchain-openai
-PyPDF2
-sentence-transformers
-python-dotenv
 streamlit
-requests
-pdfplumber
+python-dotenv
+langchain-core
+langchain-openai
+langgraph
+pypdf2
+sentence-transformers
+graphviz
+pydotplus
 langchain-groq
-python-multipart
 -e .
