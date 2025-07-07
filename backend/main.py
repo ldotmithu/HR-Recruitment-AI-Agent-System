@@ -86,6 +86,7 @@ async def process_resume(
             'scoring_error': False,
             'email_error': False,
             'error_message': None,
+            'email_sent': False, # Add this initialization
         }
 
         print("Invoking LangGraph workflow in background...")

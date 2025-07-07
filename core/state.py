@@ -8,6 +8,8 @@ class HRApplicationState(TypedDict):
     ats_score:float
     resume_summary:Optional[str]
     
+    email_sent: bool  # True if an acceptance/rejection email was successfully sent
+    
     extraction_error: bool        # True if PDF extraction failed
     scoring_error: bool           # True if ATS scoring failed
     email_error: bool             # True if email sending failed

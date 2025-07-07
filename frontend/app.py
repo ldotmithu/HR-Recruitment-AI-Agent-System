@@ -4,12 +4,12 @@ import json
 import os
 
 st.set_page_config(
-    page_title="HR AI Resume Analyzer",
+    page_title="HR SmartHire AI Agents",
     page_icon="📄",
     layout="centered"
 )
 
-st.title("📄 HR AI Resume Analyzer")
+st.title("📄 HR SmartHire AI Agents")
 st.markdown("Upload a resume PDF and provide a job description to get an ATS score, resume summary, and an automated email decision.")
 
 

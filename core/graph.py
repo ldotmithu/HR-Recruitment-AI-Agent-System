@@ -135,11 +135,11 @@ def summarize_resume_node(state: HRApplicationState) -> HRApplicationState:
         return updated_state
 
 
+
 def send_rejection_node(state: HRApplicationState) -> HRApplicationState:
-    """Sends a rejection email."""
     print(f"--- Node: send_rejection ---")
     
-    
+
     if state.get("email_error"): 
          print("Skipping rejection email due to prior email configuration error.")
          return state 
@@ -151,7 +151,8 @@ def send_rejection_node(state: HRApplicationState) -> HRApplicationState:
         updated_state: HRApplicationState = {
             **state,
             "email_error": True,
-            "error_message": error_msg
+            "error_message": error_msg,
+            "email_sent": False 
         }
         print(f"Node: send_rejection error. State update: {updated_state}")
         return updated_state
@@ -167,7 +168,6 @@ def send_rejection_node(state: HRApplicationState) -> HRApplicationState:
     return updated_state
 
 def send_acceptance_node(state: HRApplicationState) -> HRApplicationState:
-    """Sends an acceptance email."""
     print(f"--- Node: send_acceptance ---")
 
     if state.get("email_error"): 
@@ -181,7 +181,8 @@ def send_acceptance_node(state: HRApplicationState) -> HRApplicationState:
         updated_state: HRApplicationState = {
             **state,
             "email_error": True,
-            "error_message": error_msg
+            "error_message": error_msg,
+            "email_sent": False
         }
         print(f"Node: send_acceptance error. State update: {updated_state}")
         return updated_state
@@ -189,12 +190,14 @@ def send_acceptance_node(state: HRApplicationState) -> HRApplicationState:
     email_sent_data = send_acceptance_email.invoke({"email": email})
     updated_state: HRApplicationState = {
         **state,
-        "email_sent": email_sent_data.get("email_sent", False),
+        "email_sent": email_sent_data.get("email_sent", False), 
         "email_error": email_sent_data.get("email_error", False),
         "error_message": email_sent_data.get("error_message", None),
     }
     print(f"Node: send_acceptance finished. State update: {updated_state}")
     return updated_state
+
+
 
 def human_review_node(state: HRApplicationState) -> HRApplicationState:
     """Logs details for human review."""
