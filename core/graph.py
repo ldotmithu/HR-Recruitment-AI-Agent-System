@@ -200,7 +200,6 @@ try:
     graph_image_bytes = hr_app_workflow.get_graph().draw_mermaid_png()
     with open("hr_workflow_graph.png", "wb") as f:
         f.write(graph_image_bytes)
-    print("Graph visualization saved as hr_workflow_graph.png")
 except Exception as e:
     print(f"Could not generate graph visualization: {e}")
     
