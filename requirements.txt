@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+langgraph
+langchain
+langchain-openai
+PyPDF2
+sentence-transformers
+python-dotenv
+streamlit
+requests
+pdfplumber
+langchain-groq
+-e .
