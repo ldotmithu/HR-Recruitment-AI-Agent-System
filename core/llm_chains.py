@@ -15,4 +15,5 @@ if llm:
         ("user", "Resume:\n{resume_text}\n\nJob Description:\n{job_text}")
     ])
     resume_summarizer = resume_summarizer_prompt | llm | StrOutputParser()
-    
+else:
+    resume_summarizer = None    
