@@ -97,4 +97,4 @@ st.sidebar.info(
     "It leverages LLMs for resume summarization and SentenceTransformers for ATS scoring."
 )
 st.sidebar.markdown("---")
-st.sidebar.markdown("Developed by Your Name/Organization")
+st.sidebar.markdown("Developed by 🤝 Mithurshan")
