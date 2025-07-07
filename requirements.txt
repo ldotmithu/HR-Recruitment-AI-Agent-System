@@ -10,4 +10,5 @@ streamlit
 requests
 pdfplumber
 langchain-groq
+python-multipart
 -e .
