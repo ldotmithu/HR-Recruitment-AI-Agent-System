@@ -2,10 +2,13 @@ import os
 from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
+from langchain_google_genai import GoogleGenerativeAI
+
 
 try:
-    llm = ChatGroq(model="gemma2-9b-it",temperature=0.2)
-    print("Groq LLM initialized successfully")
+    llm = ChatGroq(model="openai/gpt-oss-20b",temperature=0.2)
+    #llm = GoogleGenerativeAI(model="gemini-1.5-pro")
+    print("Google LLM initialized successfully")
 except Exception as e:
     raise e 
 

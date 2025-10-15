@@ -10,4 +10,5 @@ sentence-transformers
 graphviz
 pydotplus
 langchain-groq
+langchain_google_genai
 -e .
