@@ -1,4 +1,4 @@
-# HR-Recruitment-AI-Agent-System (LangChain,LangGraph) 🤖📄
+# Smart-HR-Recruitment-AI-Agents-System(Genrative AI)🤖📄
 
 ## Introduction ✨
 The **HR-Recruitment-AI-Agent-System** is a cutting-edge, modular web application designed to revolutionize the recruitment process. By harnessing the power of **Large Language Models (LLMs)** and advanced **semantic search techniques**, it automates resume analysis, evaluates ATS compatibility, generates concise summaries, and streamlines candidate communication through automated emails. Candidates are intelligently routed for rejection, acceptance, or human review based on their qualifications. 

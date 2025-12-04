@@ -1,100 +1,299 @@
-import streamlit as st
-import requests
-import json
 import os
+import requests
+import pandas as pd
+import streamlit as st
+from dotenv import load_dotenv
 
-st.set_page_config(
-    page_title="HR SmartHire AI Agents",
-    page_icon="📄",
-    layout="centered"
-)
+# ---------------- ENV ----------------
+load_dotenv()
 
-st.title("📄 HR SmartHire AI Agents")
-st.markdown("Upload a resume PDF and provide a job description to get an ATS score, resume summary, and an automated email decision.")
+# ---------------- PAGE CONFIG ----------------
+st.set_page_config(page_title="HR SmartHire AI", page_icon="🤖", layout="wide")
 
+# ---------------- SIDEBAR ----------------
+BACKEND_URL = st.sidebar.text_input("Backend URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
+st.sidebar.info("Ensure your FastAPI backend is running.")
+st.sidebar.write("🧑‍💻 Developer: Mithurshan")
 
-BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000") 
+# ---------------- SESSION STATE ----------------
+if "results" not in st.session_state:
+    st.session_state.results = []
+if "interview_active" not in st.session_state:
+    st.session_state.interview_active = False
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "current_candidate" not in st.session_state:
+    st.session_state.current_candidate = None
+if "last_ai_response" not in st.session_state:
+    st.session_state.last_ai_response = None
+if "candidate_token_data" not in st.session_state:
+    st.session_state.candidate_token_data = None
 
+# ---------------- FUNCTIONS ----------------
+def process_resume(file, jd):
+    try:
+        files = {"resume_file": (file.name, file.getvalue(), "application/pdf")}
+        data = {"job_description": jd}
+        resp = requests.post(f"{BACKEND_URL}/process_resume/", files=files, data=data, timeout=60)
+        if resp.status_code == 200:
+            res = resp.json()
+            res["file_name"] = file.name
+            res["ats_score"] = float(res.get("ats_score", 0))
+            return res
+        return {"file_name": file.name, "ats_score": 0, "error": resp.text}
+    except Exception as e:
+        return {"file_name": file.name, "ats_score": 0, "error": str(e)}
 
-uploaded_file = st.file_uploader("Upload Resume (PDF only)", type=["pdf"])
-job_description = st.text_area("Job Description", height=200, placeholder="Paste the full job description here...")
+def save_candidate_to_db(result, job_description):
+    payload = {
+        "file_name": result["file_name"],
+        "email": result.get("email", ""),
+        "ats_score": result.get("ats_score", 0),
+        "decision": result["decision"],
+        "summary": result.get("resume_summary", ""),
+        "resume_text": result.get("resume_text", ""),
+        "job_description": job_description
+    }
+    try:
+        requests.post(f"{BACKEND_URL}/candidates/", json=payload)
+    except Exception as e:
+        st.error(f"Failed to save candidate: {e}")
 
+def get_candidates_from_db():
+    try:
+        resp = requests.get(f"{BACKEND_URL}/candidates/")
+        if resp.status_code == 200:
+            return resp.json()
+        return []
+    except Exception as e:
+        st.error(f"Failed to fetch candidates: {e}")
+        return []
 
-if st.button("Process Application"):
-    if uploaded_file is None:
-        st.error("Please upload a resume PDF.")
-    elif not job_description.strip():
-        st.error("Please provide a job description.")
+def invite_candidate(candidate_id, name, email):
+    payload = {
+        "candidate_id": candidate_id,
+        "name": name,
+        "email": email
+    }
+    try:
+        resp = requests.post(f"{BACKEND_URL}/invite_candidate/", json=payload)
+        if resp.status_code == 200:
+            st.success(f"Invite sent to {email}!")
+            return resp.json().get("link")
+        else:
+            st.error(f"Failed to send invite: {resp.text}")
+    except Exception as e:
+        st.error(f"Failed to send invite: {e}")
+    return None
+
+def get_ai_response(user_input, candidate_data=None):
+    st.session_state.chat_history.append(f"Candidate: {user_input}")
+    
+    if candidate_data:
+        resume_text = candidate_data.get("resume_text", "")
+        job_text = candidate_data.get("job_text", "")
     else:
-        with st.spinner("Processing resume... This may take a moment (extracting text, scoring, summarizing, and deciding)..."):
-            try:
-                files = {"resume_file": (uploaded_file.name, uploaded_file.getvalue(), "application/pdf")}
-                data = {"job_description": job_description}
+        # Fallback if testing locally without token
+        candidate = st.session_state.current_candidate
+        resume_text = candidate.get("resume_text", "") if candidate else ""
+        job_text = st.session_state.get("job_description_text", "")
 
-                response = requests.post(f"{BACKEND_URL}/process_resume/", files=files, data=data)
-                
-                if response.status_code == 200:
-                    result = response.json()
-                    st.success("Processing Complete!")
+    payload = {
+        "resume_text": resume_text,
+        "job_text": job_text,
+        "chat_history": "\n".join(st.session_state.chat_history),
+        "user_input": user_input
+    }
+    
+    try:
+        resp = requests.post(f"{BACKEND_URL}/interview/", json=payload)
+        if resp.status_code == 200:
+            ai_response = resp.json().get("response", "")
+            st.session_state.chat_history.append(f"Interviewer: {ai_response}")
+            st.session_state.last_ai_response = ai_response
+            return ai_response
+        else:
+            st.error(f"Error: {resp.text}")
+            return None
+    except Exception as e:
+        st.error(f"Error: {e}")
+        return None
 
-                    st.subheader("Application Results:")
-                    
-                    ats_score = result.get('ats_score', 'N/A')
-                    st.metric(label="ATS Score (0-100)", value=f"{ats_score:.2f}" if isinstance(ats_score, float) else ats_score)
+def text_to_speech(text):
+    try:
+        resp = requests.post(f"{BACKEND_URL}/tts/", json={"text": text})
+        if resp.status_code == 200:
+            return resp.content
+        else:
+            st.error(f"TTS Error: {resp.text}")
+            return None
+    except Exception as e:
+        st.error(f"TTS Error: {e}")
+        return None
 
-                    st.write(f"**Applicant Email:** {result.get('email', 'Not found')}")
+def speech_to_text(audio_bytes):
+    try:
+        files = {"audio_file": ("audio.wav", audio_bytes, "audio/wav")}
+        resp = requests.post(f"{BACKEND_URL}/stt/", files=files)
+        if resp.status_code == 200:
+            return resp.json().get("text", "")
+        else:
+            st.error(f"STT Error: {resp.text}")
+            return ""
+    except Exception as e:
+        st.error(f"STT Error: {e}")
+        return ""
 
-                    st.subheader("Resume Summary:")
-                    summary = result.get('resume_summary')
-                    if summary:
-                        st.markdown(summary)
-                    else:
-                        st.write("No summary available.")
+def send_message():
+    user_input = st.session_state.user_input
+    if user_input:
+        ai_response = get_ai_response(user_input, st.session_state.candidate_token_data)
+        if ai_response:
+             audio_content = text_to_speech(ai_response)
+             if audio_content:
+                 st.audio(audio_content, format="audio/mp3", autoplay=True)
+        st.session_state.user_input = ""
 
-                    st.subheader("Automated Decision:")
-                    decision_status = ""
-                    if result.get('email_sent'):
-                        decision_status = "Accepted (Email Sent)" if result.get('ats_score', 0) >= 75 else "Rejected (Email Sent)"
-                        st.success(decision_status)
-                    elif result.get('ats_score', 0) >= 60 and result.get('ats_score', 0) < 75 :
-                        decision_status = "Human Review Recommended"
-                        st.warning(decision_status)
-                        st.info("This candidate's score falls in a range that suggests manual review is beneficial.")
-                    elif result.get('ats_score', 0) < 60:
-                        decision_status = "Rejected (No Email Sent due to issue)" if result.get('email_error') else "Rejected (Email decision)"
-                        st.error(decision_status)
-                    else:
-                        decision_status = "Unknown Decision"
-                        st.info(decision_status)
+# ---------------- ROUTING LOGIC ----------------
+query_params = st.query_params
+token = query_params.get("token")
 
+if token:
+    # --- CANDIDATE VIEW ---
+    st.title("🎤 Live AI Interview")
+    
+    if not st.session_state.candidate_token_data:
+        try:
+            resp = requests.get(f"{BACKEND_URL}/candidate/{token}")
+            if resp.status_code == 200:
+                st.session_state.candidate_token_data = resp.json()
+                # Initial greeting
+                greeting = f"Hello {st.session_state.candidate_token_data['name']}! I'm your AI interviewer. I've reviewed your resume. Shall we begin?"
+                st.session_state.chat_history.append(f"Interviewer: {greeting}")
+                st.session_state.last_ai_response = greeting
+            else:
+                st.error("Invalid or expired interview link.")
+                st.stop()
+        except Exception as e:
+            st.error(f"Error connecting to interview server: {e}")
+            st.stop()
+            
+    # Interview Interface
+    st.markdown("### Interview Chat")
+    
+    # Voice Input
+    audio_value = st.audio_input("Record your answer")
+    if audio_value:
+        st.write("Processing audio...")
+        text = speech_to_text(audio_value.getvalue())
+        if text:
+            st.success(f"You said: {text}")
+            ai_response = get_ai_response(text, st.session_state.candidate_token_data)
+            if ai_response:
+                 audio_content = text_to_speech(ai_response)
+                 if audio_content:
+                     st.audio(audio_content, format="audio/mp3", autoplay=True)
+    
+    for msg in st.session_state.chat_history:
+        if msg.startswith("Interviewer:"):
+            st.info(msg)
+        else:
+            st.success(msg)
+            
+    st.text_input("Your Answer (Text):", key="user_input", on_change=send_message)
 
-                    if result.get('extraction_error') or result.get('scoring_error') or result.get('email_error'):
-                        st.error("Errors occurred during processing:")
-                        if result.get('extraction_error'):
-                            st.write(f"- **PDF Extraction Error:** {result.get('error_message', 'Unknown')}")
-                        if result.get('scoring_error'):
-                            st.write(f"- **ATS Scoring Error:** {result.get('error_message', 'Unknown')}")
-                        if result.get('email_error'):
-                            st.write(f"- **Email Sending Error:** {result.get('error_message', 'Unknown')}")
-                        elif result.get('error_message') and not (result.get('extraction_error') or result.get('scoring_error') or result.get('email_error')):
-                             st.write(f"- **General Processing Error:** {result.get('error_message')}")
-                        st.info("Check backend logs for more details.")
+else:
+    # --- HR DASHBOARD VIEW ---
+    st.title("🤖 HR SmartHire AI — Resume Screening")
+    st.caption("Upload resumes, analyze ATS scores, auto-categorize candidates, and conduct live AI interviews.")
 
-                    st.subheader("Full Processing Details (for debugging):")
-                    st.json(result)
+    # ---------------- UPLOAD & INPUT ----------------
+    uploaded_files = st.file_uploader("📂 Upload Resumes (PDF)", type=["pdf"], accept_multiple_files=True)
+    job_description = st.text_area("💼 Job Description", placeholder="Paste job description here...", height=150)
+    analyze = st.button("🚀 Analyze")
 
+    # ---------------- RESUME PROCESSING ----------------
+    if analyze:
+        if not uploaded_files:
+            st.error("Please upload PDF resumes.")
+        elif not job_description.strip():
+            st.error("Please provide a job description.")
+        else:
+            st.session_state.results = []
+            st.session_state.job_description_text = job_description 
+            
+            os.makedirs("resumes/accepted", exist_ok=True)
+            os.makedirs("resumes/review", exist_ok=True)
+            os.makedirs("resumes/rejected", exist_ok=True)
+
+            progress = st.progress(0)
+            for i, file in enumerate(uploaded_files):
+                result = process_resume(file, job_description)
+
+                score = result.get("ats_score", 0)
+                if score >= 70:
+                    decision = "Accepted"
+                elif 60 <= score < 70:
+                    decision = "Review"
                 else:
-                    st.error(f"Error from backend: {response.status_code} - {response.text}")
-            except requests.exceptions.ConnectionError:
-                st.error(f"Could not connect to backend at {BACKEND_URL}. Please ensure the FastAPI backend is running.")
-            except Exception as e:
-                st.error(f"An unexpected error occurred: {e}")
+                    decision = "Rejected"
+                result["decision"] = decision
 
-st.sidebar.header("About")
-st.sidebar.info(
-    "This application uses LangGraph for orchestrating the HR workflow, "
-    "FastAPI for the backend API, and Streamlit for the interactive UI. "
-    "It leverages LLMs for resume summarization and SentenceTransformers for ATS scoring."
-)
-st.sidebar.markdown("---")
-st.sidebar.markdown("Developed by 🤝 Mithurshan")
+                # Save file locally
+                save_path = f"resumes/{decision.lower()}/{file.name}"
+                with open(save_path, "wb") as f:
+                    f.write(file.getvalue())
+
+                # Save to DB via API
+                if decision in ["Accepted", "Review"]:
+                    save_candidate_to_db(result, job_description)
+
+                st.session_state.results.append(result)
+                progress.progress((i+1)/len(uploaded_files))
+
+            st.success("✅ Resume processing completed!")
+
+    # ---------------- DASHBOARD ----------------
+    # Fetch latest candidates from DB
+    candidates_data = get_candidates_from_db()
+    
+    
+    if candidates_data:
+        df = pd.DataFrame(candidates_data)
+        st.subheader("📊 Results Summary")
+        col1, col2, col3, col4, col5 = st.columns(5)
+        col1.metric("Total", len(df))
+        col2.metric("Accepted", (df["decision"] == "Accepted").sum())
+        col3.metric("Review", (df["decision"] == "Review").sum())
+        col4.metric("Rejected", (df["decision"] == "Rejected").sum())
+        col5.metric("Avg ATS", round(df["ats_score"].mean(), 2))
+        st.dataframe(df[["file_name", "ats_score", "decision", "email"]], use_container_width=True)
+        
+        st.markdown("---")
+        st.subheader("📧 Send Interview Invites")
+        
+        # Filter for Accepted/Review
+        invite_candidates = [c for c in candidates_data if c["decision"] in ["Accepted", "Review"]]
+        
+        if invite_candidates:
+            for cand in invite_candidates:
+                c_id = cand["id"]
+                c_name = cand["file_name"]
+                c_email = cand["email"]
+                c_decision = cand["decision"]
+                
+                col1, col2, col3 = st.columns([3, 2, 2])
+                col1.write(f"**{c_name}** ({c_decision})")
+                col2.write(c_email if c_email else "No Email")
+                if col3.button(f"Send Invite to {c_name}", key=f"invite_{c_id}"):
+                    if c_email:
+                        link = invite_candidate(c_id, c_name, c_email)
+                        if link:
+                            st.info(f"Link generated: {link}")
+                    else:
+                        st.error("No email found for this candidate.")
+        else:
+            st.info("No candidates available for interview invites yet.")
+
+    else:
+        st.info("Upload resumes and click *Analyze* to start.")

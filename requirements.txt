@@ -12,3 +12,6 @@ pydotplus
 langchain-groq
 langchain_google_genai
 -e .
+gTTS
+SpeechRecognition
+pydub

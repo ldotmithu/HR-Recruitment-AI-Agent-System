@@ -62,7 +62,7 @@ def send_rejection_email(email:str):
         msg["Subject"] = "Regarding Your Job Application"
         msg["From"] = sender
         msg["To"] = email
-        msg.set_content("Thank you for your application. We regret to inform you that we will not be moving forward with your application at this time. Please feel free to reapply in the future if your qualifications align with our future openings. Best wishes!")
+        msg.set_content("Thank you for your application. After reviewing your resume, we found that your profile does not currently match the requirements for this role. We appreciate your interest and wish you the best in your job search.")
 
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(sender, password)
@@ -89,7 +89,7 @@ def send_acceptance_email(email:str):
         msg["Subject"] = "Exciting News Regarding Your Job Application!"
         msg["From"] = sender
         msg["To"] = email
-        msg.set_content("Great news! We're impressed with your application and would like to invite you for an interview. Please expect a follow-up email with scheduling details shortly. We look forward to speaking with you!")
+        msg.set_content("We have reviewed your resume and found it very interesting! Your profile aligns well with our role. We will inform you shortly about the online interview process.")
 
         with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
             server.login(sender, password)
@@ -101,4 +101,30 @@ def send_acceptance_email(email:str):
         print(f"{error_msg}")
         return {"email_sent": False, "email_error": True, "error_message": error_msg}
     
-       
+    
+@tool
+def send_review_email(email:str):
+    """Send an email informing the candidate that their resume is under review."""
+    sender = os.getenv("EMAIL_SENDER")
+    password= os.getenv("EMAIL_PASSWORD")
+    
+    if not sender and password:
+        error_msg = "Email sender or password not configured in .env"
+        return {"email_sent": False, "email_error": True, "error_message": error_msg}
+    
+    try:
+        msg = EmailMessage()
+        msg["Subject"] = "Your Application is Under Review"
+        msg["From"] = sender
+        msg["To"] = email
+        msg.set_content("We have received your application and are currently reviewing your resume. We will get back to you soon with an update regarding the next steps.")
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
+            server.login(sender, password)
+            server.send_message(msg)
+        print(f"Review email sent to: {email}")
+        return {"email_sent": True, "email_error": False, "error_message": None}
+    except Exception as e:
+        error_msg = f"Error sending review email to {email}: {e}"
+        print(f"{error_msg}")
+        return {"email_sent": False, "email_error": True, "error_message": error_msg}
