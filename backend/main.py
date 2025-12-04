@@ -303,17 +303,80 @@ async def invite_candidate(request: InviteCandidateRequest):
         msg['To'] = request.email
         msg['Subject'] = "Invitation to AI Mock Interview"
 
-        body = f"""
-        Dear {request.name},
+        # Plain text version
+        plain_text = f"""Dear {request.name},
 
-        You have been selected for the next round. Please click the link below to start your AI-powered mock interview:
+Congratulations! You have been selected for the next round of our recruitment process.
 
-        {link}
+We are excited to invite you to an AI-powered mock interview. This is a unique opportunity for us to learn more about your skills and experience in an interactive format.
 
-        Best regards,
-        HR Team
-        """
-        msg.attach(MIMEText(body, 'plain'))
+To start your interview, please click the link below:
+{link}
+
+Please ensure you have a stable internet connection and are in a quiet environment before starting.
+
+Best regards,
+HR Team
+"""
+
+        # HTML version
+        html_content = f"""<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }}
+        .header {{ background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+        .content {{ background: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }}
+        .footer {{ text-align: center; margin-top: 20px; font-size: 12px; color: #666; }}
+        h1 {{ margin: 0; font-size: 24px; }}
+        p {{ margin: 15px 0; }}
+        .button {{ display: inline-block; padding: 12px 24px; background-color: #667eea; color: white; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; }}
+        .button:hover {{ background-color: #5a6fd6; }}
+        .note {{ background-color: #fff3cd; padding: 15px; border-left: 4px solid #ffc107; margin: 20px 0; font-size: 14px; }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Interview Invitation</h1>
+        </div>
+        <div class="content">
+            <p>Dear {request.name},</p>
+            
+            <p><strong>Congratulations!</strong> You have been selected for the next round of our recruitment process.</p>
+            
+            <p>We are excited to invite you to an <strong>AI-powered mock interview</strong>. This is a unique opportunity for us to learn more about your skills and experience in an interactive format.</p>
+            
+            <div style="text-align: center;">
+                <a href="{link}" class="button">Start Interview Now</a>
+            </div>
+            
+            <p>If the button above doesn't work, you can copy and paste the following link into your browser:</p>
+            <p style="word-break: break-all; color: #667eea;">{link}</p>
+            
+            <div class="note">
+                <p style="margin: 0;"><strong>📝 Important Tips:</strong></p>
+                <ul style="margin: 10px 0; padding-left: 20px;">
+                    <li>Ensure you have a stable internet connection</li>
+                    <li>Find a quiet environment with minimal background noise</li>
+                    <li>Allow access to your microphone when prompted</li>
+                </ul>
+            </div>
+            
+            <p>Best regards,<br>
+            <strong>HR Team</strong></p>
+        </div>
+        <div class="footer">
+            <p>This is an automated message from our AI-powered recruitment system.</p>
+        </div>
+    </div>
+</body>
+</html>
+"""
+
+        msg.attach(MIMEText(plain_text, 'plain'))
+        msg.attach(MIMEText(html_content, 'html'))
 
         server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()

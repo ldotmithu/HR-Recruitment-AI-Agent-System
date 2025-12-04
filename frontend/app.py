@@ -4,18 +4,18 @@ import pandas as pd
 import streamlit as st
 from dotenv import load_dotenv
 
-# ---------------- ENV ----------------
+
 load_dotenv()
 
-# ---------------- PAGE CONFIG ----------------
+
 st.set_page_config(page_title="HR SmartHire AI", page_icon="🤖", layout="wide")
 
-# ---------------- SIDEBAR ----------------
+
 BACKEND_URL = st.sidebar.text_input("Backend URL", os.getenv("BACKEND_URL", "http://localhost:8000"))
 st.sidebar.info("Ensure your FastAPI backend is running.")
 st.sidebar.write("🧑‍💻 Developer: Mithurshan")
 
-# ---------------- SESSION STATE ----------------
+
 if "results" not in st.session_state:
     st.session_state.results = []
 if "interview_active" not in st.session_state:
@@ -29,7 +29,7 @@ if "last_ai_response" not in st.session_state:
 if "candidate_token_data" not in st.session_state:
     st.session_state.candidate_token_data = None
 
-# ---------------- FUNCTIONS ----------------
+
 def process_resume(file, jd):
     try:
         files = {"resume_file": (file.name, file.getvalue(), "application/pdf")}

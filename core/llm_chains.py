@@ -8,7 +8,7 @@ from langchain_google_genai import GoogleGenerativeAI
 try:
     llm = ChatGroq(model="openai/gpt-oss-20b",temperature=0.2)
     #llm = GoogleGenerativeAI(model="gemini-1.5-pro")
-    print("Google LLM initialized successfully")
+    print(" LLM initialized successfully")
 except Exception as e:
     raise e 
 
